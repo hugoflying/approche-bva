@@ -315,13 +315,21 @@ const BVA_LAT = 49.506;
 const BVA_LON = 2.004;
 
 const SCHENGEN = new Set([
-  'Austria','Belgium','Bulgaria','Croatia','Czech Republic','Czechia',
-  'Denmark','Estonia','Finland','France','Germany','Greece','Hungary',
-  'Italy','Latvia','Lithuania','Luxembourg','Malta','Netherlands','Poland',
-  'Portugal','Romania','Slovakia','Slovenia','Spain','Sweden',
-  'Iceland','Norway','Switzerland','Liechtenstein'
+  'Germany','Austria','Belgium','Bulgaria','Croatia','Denmark','Spain',
+  'Estonia','Finland','France','Greece','Hungary','Iceland','Italy',
+  'Latvia','Liechtenstein','Lithuania','Luxembourg','Malta','Norway',
+  'Netherlands','Poland','Portugal','Czech Republic','Czechia','Romania',
+  'Slovakia','Slovenia','Sweden','Switzerland'
 ]);
-const HORS_SCHENGEN = new Set(['Ireland','Cyprus','United Kingdom']);
+
+// Pays européens hors Schengen (UE non-Schengen + candidats + voisins) → PAF
+const HORS_SCHENGEN = new Set([
+  'Ireland','Cyprus','United Kingdom',
+  'Albania','Armenia','Azerbaijan','Belarus',
+  'Bosnia and Herzegovina','Georgia','Macedonia','North Macedonia',
+  'Moldova','Montenegro','Serbia','Ukraine'
+]);
+
 function flightType(country) {
   if (SCHENGEN.has(country)) return 'schengen';
   if (HORS_SCHENGEN.has(country)) return 'horsschengen';
