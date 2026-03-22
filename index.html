@@ -572,7 +572,7 @@ async function doRefresh() {
     document.getElementById('last-update').textContent =
       'MAJ ' + now.toLocaleTimeString('fr-FR');
     setDot('ok');
-    setStatusText(`Milly-sur-Thérain · rayon ${radiusKm} km · ${(data.states||[]).length} états reçus`);
+    setStatusText(`LFOB/BVA · rayon ${radiusKm} km`);
     // Hide notice bar if visible
     document.getElementById('notice-bar-wrap').innerHTML = '';
   } catch (err) {
