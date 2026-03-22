@@ -199,6 +199,7 @@ button#refresh-btn:hover { background: #1f6feb44; }
 
 .badge.eu { background: #1f6feb22; color: #79c0ff; border: 1px solid #1f6feb44; }
 .badge.tiers { background: #da3633; color: #ffa198; border: 1px solid #da363366; }
+.badge.rwy { background: #2ea04322; color: #56d364; border: 1px solid #2ea04366; font-size: 11px; }
 
 .card-country {
   font-size: 11px;
@@ -374,31 +375,38 @@ function processData(data) {
     const dist = haversine(lat, lon, BVA_LAT, BVA_LON);
     if (dist > radiusKm) continue;
 
-    // Heading filter: within 65° of bearing to BVA
-    const track = s[10];
-    if (track !== null) {
-      const brng = bearing(lat, lon, BVA_LAT, BVA_LON);
-      if (angleDiff(track, brng) > 65) continue;
-    }
+    // Callsign filter
+    const cs = (s[1] || '').trim();
+    const PREFIXES = ['WZZ','WMT','VOE','HYS','SEU','DNA','FR'];
+    if (!PREFIXES.some(p => cs.toUpperCase().startsWith(p))) continue;
 
-    // Altitude filter: below FL150 (4572m)
+    // Altitude filter: below FL100 (3048m)
     const altM = s[7];
-    if (altM !== null && altM > 4572) continue;
+    if (altM !== null && altM > 3048) continue;
+
+    const track = s[10];
 
     seen.add(icao);
 
     const altFt = altM !== null ? Math.round(altM * 3.281) : null;
     const speedKt = s[9] !== null ? Math.round(s[9] * 1.944) : null;
     const vrMs = s[11];
-    const callsign = (s[1] || '').trim() || icao.toUpperCase();
+    const callsign = cs || icao.toUpperCase();
     const country = s[2] || '?';
     const nonEU = !EU.has(country);
+
+    // Runway detection
+    let runway = null;
+    if (speedKt !== null && speedKt < 50 && track !== null) {
+      if (track >= 110 && track <= 130) runway = '12';
+      else if (track >= 290 && track <= 310) runway = '30';
+    }
 
     const flight = {
       icao, callsign, country, nonEU,
       lat, lon, altFt, speedKt, vrMs,
       dist: Math.round(dist),
-      track
+      track, runway
     };
 
     if (!announcedSet.has(icao) && !(icao in approaching)) {
@@ -441,6 +449,9 @@ function cardHtml(f, blinkClass, clickable) {
   const badge = f.nonEU
     ? '<span class="badge tiers">Hors UE</span>'
     : '<span class="badge eu">UE</span>';
+  const rwBadge = f.runway
+    ? `<span class="badge rwy">RWY ${f.runway}</span>`
+    : '';
   const stats = [
     f.altFt !== null ? `<div class="stat"><span class="stat-val">${f.altFt.toLocaleString('fr-FR')}</span><span class="stat-lbl">ft</span></div>` : '',
     f.speedKt !== null ? `<div class="stat"><span class="stat-val">${f.speedKt}</span><span class="stat-lbl">kt</span></div>` : '',
@@ -451,7 +462,7 @@ function cardHtml(f, blinkClass, clickable) {
   return `<div class="card ${blinkClass} ${clickable ? 'clickable' : ''}" data-icao="${f.icao}">
     <div class="card-top">
       <span class="callsign">${f.callsign}</span>
-      ${badge}
+      <div style="display:flex;gap:5px;align-items:center">${rwBadge}${badge}</div>
     </div>
     <div class="card-country">${f.country}</div>
     <div class="card-stats">${stats}</div>
