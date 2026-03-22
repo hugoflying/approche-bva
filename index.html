@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BVA — Approches</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #0d1117;
+  color: #e6edf3;
+  font-size: 14px;
+  min-height: 100vh;
+  padding: 0;
+}
+
+#header {
+  background: #161b22;
+  border-bottom: 1px solid #21262d;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+#header h1 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #e6edf3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #3fb950;
+  flex-shrink: 0;
+}
+.dot.err { background: #f85149; }
+.dot.loading { background: #d29922; animation: pulse 1s infinite; }
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+.ctrl-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #8b949e;
+}
+
+.ctrl-group label { white-space: nowrap; }
+
+input[type=range] {
+  width: 90px;
+  accent-color: #388bfd;
+  height: 4px;
+  cursor: pointer;
+}
+
+select, button {
+  background: #21262d;
+  color: #e6edf3;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+select:hover, button:hover { border-color: #8b949e; }
+
+button#refresh-btn {
+  background: #1f6feb22;
+  border-color: #388bfd66;
+  color: #79c0ff;
+}
+
+button#refresh-btn:hover { background: #1f6feb44; }
+
+#status-text { font-size: 12px; color: #8b949e; }
+#last-update { font-size: 11px; color: #6e7681; margin-left: auto; white-space: nowrap; }
+
+#main {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  background: #21262d;
+  min-height: calc(100vh - 57px);
+}
+
+.col {
+  background: #0d1117;
+  padding: 16px 14px;
+}
+
+.col-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #21262d;
+}
+
+.col-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #8b949e;
+}
+
+.col-title.approche { color: #d29922; }
+.col-title.annonces { color: #3fb950; }
+.col-title.paf { color: #f85149; }
+
+.count {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: #21262d;
+  color: #8b949e;
+}
+
+.col.col-approche .count { background: #d2992222; color: #d29922; }
+.col.col-annonces .count { background: #3fb95022; color: #3fb950; }
+.col.col-paf .count { background: #f8514922; color: #f85149; }
+
+.empty {
+  font-size: 12px;
+  color: #484f58;
+  text-align: center;
+  padding: 32px 8px;
+  font-style: italic;
+}
+
+.card {
+  background: #161b22;
+  border: 1px solid #21262d;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  transition: border-color 0.15s;
+}
+
+.card.clickable { cursor: pointer; }
+.card.clickable:hover { border-color: #388bfd55; }
+
+.card.blink-eu {
+  animation: blink-eu 0.75s ease-in-out infinite;
+}
+.card.blink-tiers {
+  animation: blink-tiers 0.75s ease-in-out infinite;
+}
+
+@keyframes blink-eu {
+  0%,100% { border-color: #d29922; background: #d2992215; }
+  50%    { border-color: #21262d; background: #161b22; }
+}
+@keyframes blink-tiers {
+  0%,100% { border-color: #f85149; background: #f8514915; }
+  50%    { border-color: #21262d; background: #161b22; }
+}
+
+.card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.callsign {
+  font-family: 'SF Mono', 'Consolas', monospace;
+  font-size: 15px;
+  font-weight: 600;
+  color: #e6edf3;
+  letter-spacing: 0.03em;
+}
+
+.badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge.eu { background: #1f6feb22; color: #79c0ff; border: 1px solid #1f6feb44; }
+.badge.tiers { background: #da3633; color: #ffa198; border: 1px solid #da363366; }
+
+.card-country {
+  font-size: 11px;
+  color: #8b949e;
+  margin-bottom: 7px;
+}
+
+.card-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 11px;
+  color: #6e7681;
+}
+
+.stat { display: flex; flex-direction: column; gap: 1px; }
+.stat-val { font-size: 13px; color: #c9d1d9; font-weight: 500; }
+.stat-lbl { font-size: 10px; color: #484f58; }
+
+.vr-up { color: #3fb950; }
+.vr-dn { color: #f85149; }
+
+.hint {
+  font-size: 10px;
+  color: #484f58;
+  text-align: center;
+  margin-top: 8px;
+  font-style: italic;
+}
+
+.notice-bar {
+  background: #1f6feb15;
+  border: 1px solid #1f6feb33;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 11px;
+  color: #79c0ff;
+  margin: 0 14px 12px;
+}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>
+    <span id="status-dot" class="dot loading"></span>
+    BVA — Suivi approches
+  </h1>
+
+  <div class="ctrl-group">
+    <label>Rayon</label>
+    <input type="range" id="radius-input" min="20" max="200" step="10" value="80">
+    <span id="radius-val" style="min-width:44px;font-weight:600;color:#e6edf3">80 km</span>
+  </div>
+
+  <div class="ctrl-group">
+    <label>Actualisation</label>
+    <select id="interval-select">
+      <option value="30">30 s</option>
+      <option value="60" selected>1 min</option>
+      <option value="120">2 min</option>
+    </select>
+  </div>
+
+  <button id="refresh-btn" onclick="manualRefresh()">&#8635; Actualiser</button>
+
+  <span id="status-text">Connexion à OpenSky…</span>
+  <span id="last-update"></span>
+</div>
+
+<div id="notice-bar-wrap"></div>
+
+<div id="main">
+  <div class="col col-approche">
+    <div class="col-header">
+      <span class="col-title approche">En approche</span>
+      <span class="count" id="count-approche">0</span>
+    </div>
+    <div id="list-approche"><div class="empty">Aucun vol en approche</div></div>
+    <div class="hint">Cliquez sur un vol pour l'annoncer</div>
+  </div>
+
+  <div class="col col-annonces">
+    <div class="col-header">
+      <span class="col-title annonces">Annoncés</span>
+      <span class="count" id="count-annonces">0</span>
+    </div>
+    <div id="list-annonces"><div class="empty">Aucun vol annoncé</div></div>
+  </div>
+
+  <div class="col col-paf">
+    <div class="col-header">
+      <span class="col-title paf">PAF</span>
+      <span class="count" id="count-paf">0</span>
+    </div>
+    <div id="list-paf"><div class="empty">Aucun vol PAF</div></div>
+  </div>
+</div>
+
+<script>
+const BVA_LAT = 49.4544;
+const BVA_LON = 2.1128;
+
+const EU = new Set([
+  'Austria','Belgium','Bulgaria','Croatia','Cyprus','Czech Republic','Czechia',
+  'Denmark','Estonia','Finland','France','Germany','Greece','Hungary','Ireland',
+  'Italy','Latvia','Lithuania','Luxembourg','Malta','Netherlands','Poland',
+  'Portugal','Romania','Slovakia','Slovenia','Spain','Sweden'
+]);
+
+let radiusKm = 80;
+let refreshSec = 60;
+let timer = null;
+
+// flight state maps
+const approaching = {};   // icao24 → flight obj (blinking)
+const announced = [];     // ordered [{...}]
+const pafList = [];       // ordered [{...}]
+const announcedSet = new Set();
+
+// ── Geo helpers ──────────────────────────────────────────────────────────────
+
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371, r = Math.PI / 180;
+  const dLat = (lat2 - lat1) * r, dLon = (lon2 - lon1) * r;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*r)*Math.cos(lat2*r)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function bearing(lat1, lon1, lat2, lon2) {
+  const r = Math.PI / 180;
+  const dLon = (lon2 - lon1) * r;
+  const y = Math.sin(dLon) * Math.cos(lat2*r);
+  const x = Math.cos(lat1*r)*Math.sin(lat2*r) - Math.sin(lat1*r)*Math.cos(lat2*r)*Math.cos(dLon);
+  return (Math.atan2(y, x) * 180/Math.PI + 360) % 360;
+}
+
+function angleDiff(a, b) {
+  const d = Math.abs(a - b) % 360;
+  return d > 180 ? 360 - d : d;
+}
+
+// ── OpenSky fetch ─────────────────────────────────────────────────────────────
+
+async function fetchOpenSky() {
+  const dLat = radiusKm / 111;
+  const dLon = radiusKm / (111 * Math.cos(BVA_LAT * Math.PI / 180));
+  const url = [
+    'https://opensky-network.org/api/states/all',
+    `?lamin=${(BVA_LAT - dLat).toFixed(4)}`,
+    `&lomin=${(BVA_LON - dLon).toFixed(4)}`,
+    `&lamax=${(BVA_LAT + dLat).toFixed(4)}`,
+    `&lomax=${(BVA_LON + dLon).toFixed(4)}`
+  ].join('');
+  const resp = await fetch(url, { signal: AbortSignal.timeout(10000) });
+  if (!resp.ok) throw new Error('HTTP ' + resp.status);
+  return await resp.json();
+}
+
+// ── Process states ────────────────────────────────────────────────────────────
+
+function processData(data) {
+  if (!data || !data.states) return;
+
+  const seen = new Set();
+
+  for (const s of data.states) {
+    const icao = s[0];
+    const lat = s[6], lon = s[5];
+    if (lat === null || lon === null) continue;
+    if (s[8]) continue; // on ground
+
+    const dist = haversine(lat, lon, BVA_LAT, BVA_LON);
+    if (dist > radiusKm) continue;
+
+    // Heading filter: within 65° of bearing to BVA
+    const track = s[10];
+    if (track !== null) {
+      const brng = bearing(lat, lon, BVA_LAT, BVA_LON);
+      if (angleDiff(track, brng) > 65) continue;
+    }
+
+    // Altitude filter: below FL150 (4572m)
+    const altM = s[7];
+    if (altM !== null && altM > 4572) continue;
+
+    seen.add(icao);
+
+    const altFt = altM !== null ? Math.round(altM * 3.281) : null;
+    const speedKt = s[9] !== null ? Math.round(s[9] * 1.944) : null;
+    const vrMs = s[11];
+    const callsign = (s[1] || '').trim() || icao.toUpperCase();
+    const country = s[2] || '?';
+    const nonEU = !EU.has(country);
+
+    const flight = {
+      icao, callsign, country, nonEU,
+      lat, lon, altFt, speedKt, vrMs,
+      dist: Math.round(dist),
+      track
+    };
+
+    if (!announcedSet.has(icao) && !(icao in approaching)) {
+      approaching[icao] = { ...flight, enteredAt: Date.now() };
+    } else if (icao in approaching) {
+      approaching[icao] = { ...approaching[icao], ...flight };
+    }
+  }
+
+  // Drop flights that left the zone
+  for (const icao of Object.keys(approaching)) {
+    if (!seen.has(icao)) delete approaching[icao];
+  }
+
+  render();
+}
+
+// ── Acknowledge ───────────────────────────────────────────────────────────────
+
+function acknowledge(icao) {
+  const f = approaching[icao];
+  if (!f) return;
+  delete approaching[icao];
+  announcedSet.add(icao);
+  announced.unshift({ ...f, ackedAt: Date.now() });
+  if (f.nonEU) pafList.unshift({ ...f, ackedAt: Date.now() });
+  render();
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+
+function vrHtml(vrMs) {
+  if (vrMs === null || vrMs === undefined) return '';
+  if (vrMs < -1.5) return `<span class="vr-dn">&#8595; ${Math.round(Math.abs(vrMs)*196)} ft/min</span>`;
+  if (vrMs > 1.5)  return `<span class="vr-up">&#8593; ${Math.round(vrMs*196)} ft/min</span>`;
+  return '<span style="color:#484f58">— palier</span>';
+}
+
+function cardHtml(f, blinkClass, clickable) {
+  const badge = f.nonEU
+    ? '<span class="badge tiers">Hors UE</span>'
+    : '<span class="badge eu">UE</span>';
+  const stats = [
+    f.altFt !== null ? `<div class="stat"><span class="stat-val">${f.altFt.toLocaleString('fr-FR')}</span><span class="stat-lbl">ft</span></div>` : '',
+    f.speedKt !== null ? `<div class="stat"><span class="stat-val">${f.speedKt}</span><span class="stat-lbl">kt</span></div>` : '',
+    `<div class="stat"><span class="stat-val">${f.dist}</span><span class="stat-lbl">km</span></div>`,
+    f.vrMs !== null ? `<div class="stat" style="flex:1">${vrHtml(f.vrMs)}</div>` : '',
+  ].filter(Boolean).join('');
+
+  return `<div class="card ${blinkClass} ${clickable ? 'clickable' : ''}" data-icao="${f.icao}">
+    <div class="card-top">
+      <span class="callsign">${f.callsign}</span>
+      ${badge}
+    </div>
+    <div class="card-country">${f.country}</div>
+    <div class="card-stats">${stats}</div>
+  </div>`;
+}
+
+function render() {
+  const apList = Object.values(approaching);
+
+  document.getElementById('count-approche').textContent = apList.length;
+  document.getElementById('count-annonces').textContent = announced.length;
+  document.getElementById('count-paf').textContent = pafList.length;
+
+  const la = document.getElementById('list-approche');
+  la.innerHTML = apList.length
+    ? apList.map(f => cardHtml(f, f.nonEU ? 'blink-tiers' : 'blink-eu', true)).join('')
+    : '<div class="empty">Aucun vol en approche</div>';
+
+  const ln = document.getElementById('list-annonces');
+  ln.innerHTML = announced.length
+    ? announced.map(f => cardHtml(f, '', false)).join('')
+    : '<div class="empty">Aucun vol annoncé</div>';
+
+  const lp = document.getElementById('list-paf');
+  lp.innerHTML = pafList.length
+    ? pafList.map(f => cardHtml(f, '', false)).join('')
+    : '<div class="empty">Aucun vol PAF</div>';
+}
+
+// ── Event delegation for click ────────────────────────────────────────────────
+
+document.getElementById('list-approche').addEventListener('click', e => {
+  const card = e.target.closest('.card[data-icao]');
+  if (card) acknowledge(card.dataset.icao);
+});
+
+// ── Controls ──────────────────────────────────────────────────────────────────
+
+document.getElementById('radius-input').addEventListener('input', function() {
+  radiusKm = +this.value;
+  document.getElementById('radius-val').textContent = radiusKm + ' km';
+});
+document.getElementById('radius-input').addEventListener('change', () => doRefresh());
+
+document.getElementById('interval-select').addEventListener('change', function() {
+  refreshSec = +this.value;
+  restartTimer();
+});
+
+// ── Refresh loop ──────────────────────────────────────────────────────────────
+
+function setDot(state) {
+  const d = document.getElementById('status-dot');
+  d.className = 'dot' + (state === 'ok' ? '' : state === 'err' ? ' err' : ' loading');
+}
+
+function setStatusText(t) {
+  document.getElementById('status-text').textContent = t;
+}
+
+async function doRefresh() {
+  setDot('loading');
+  setStatusText('Chargement…');
+  try {
+    const data = await fetchOpenSky();
+    processData(data);
+    const now = new Date();
+    document.getElementById('last-update').textContent =
+      'MAJ ' + now.toLocaleTimeString('fr-FR');
+    setDot('ok');
+    setStatusText(`BVA · rayon ${radiusKm} km · ${(data.states||[]).length} états reçus`);
+    // Hide notice bar if visible
+    document.getElementById('notice-bar-wrap').innerHTML = '';
+  } catch (err) {
+    setDot('err');
+    setStatusText('Erreur API OpenSky');
+    document.getElementById('notice-bar-wrap').innerHTML =
+      `<div class="notice-bar" style="margin:12px 14px 0">
+        &#9888; Impossible de joindre OpenSky Network. Vérifiez la connexion réseau.<br>
+        <span style="opacity:.7">Détail : ${err.message}</span>
+      </div>`;
+    console.error('OpenSky error:', err);
+  }
+}
+
+function restartTimer() {
+  if (timer) clearInterval(timer);
+  timer = setInterval(doRefresh, refreshSec * 1000);
+}
+
+function manualRefresh() {
+  doRefresh();
+  restartTimer();
+}
+
+// Kick off
+doRefresh();
+restartTimer();
+</script>
+</body>
+</html>
