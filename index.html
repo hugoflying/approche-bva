@@ -157,20 +157,21 @@ button#refresh-btn:hover { background: #1f6feb44; }
 .card.clickable { cursor: pointer; }
 .card.clickable:hover { border-color: #388bfd55; }
 
-.card.blink-eu {
-  animation: blink-eu 0.75s ease-in-out infinite;
-}
-.card.blink-tiers {
-  animation: blink-tiers 0.75s ease-in-out infinite;
-}
+.card.blink-schengen { animation: blink-schengen 0.75s ease-in-out infinite; }
+.card.blink-hs       { animation: blink-hs 0.75s ease-in-out infinite; }
+.card.blink-tiers    { animation: blink-tiers 0.75s ease-in-out infinite; }
 
-@keyframes blink-eu {
+@keyframes blink-schengen {
+  0%,100% { border-color: #388bfd; background: #388bfd15; }
+  50%     { border-color: #21262d; background: #161b22; }
+}
+@keyframes blink-hs {
   0%,100% { border-color: #d29922; background: #d2992215; }
-  50%    { border-color: #21262d; background: #161b22; }
+  50%     { border-color: #21262d; background: #161b22; }
 }
 @keyframes blink-tiers {
   0%,100% { border-color: #f85149; background: #f8514915; }
-  50%    { border-color: #21262d; background: #161b22; }
+  50%     { border-color: #21262d; background: #161b22; }
 }
 
 .card-top {
@@ -197,8 +198,9 @@ button#refresh-btn:hover { background: #1f6feb44; }
   letter-spacing: 0.05em;
 }
 
-.badge.eu { background: #1f6feb22; color: #79c0ff; border: 1px solid #1f6feb44; }
-.badge.tiers { background: #da3633; color: #ffa198; border: 1px solid #da363366; }
+.badge.schengen    { background: #1f6feb22; color: #79c0ff; border: 1px solid #1f6feb44; }
+.badge.horsschengen{ background: #d2992222; color: #e3a93a; border: 1px solid #d2992244; }
+.badge.tiers       { background: #da363322; color: #ffa198; border: 1px solid #da363344; }
 .badge.rwy { background: #2ea04322; color: #56d364; border: 1px solid #2ea04366; font-size: 11px; }
 
 .card-ts {
@@ -312,12 +314,19 @@ button#refresh-btn:hover { background: #1f6feb44; }
 const BVA_LAT = 49.506;
 const BVA_LON = 2.004;
 
-const EU = new Set([
-  'Austria','Belgium','Bulgaria','Croatia','Cyprus','Czech Republic','Czechia',
-  'Denmark','Estonia','Finland','France','Germany','Greece','Hungary','Ireland',
+const SCHENGEN = new Set([
+  'Austria','Belgium','Bulgaria','Croatia','Czech Republic','Czechia',
+  'Denmark','Estonia','Finland','France','Germany','Greece','Hungary',
   'Italy','Latvia','Lithuania','Luxembourg','Malta','Netherlands','Poland',
-  'Portugal','Romania','Slovakia','Slovenia','Spain','Sweden'
+  'Portugal','Romania','Slovakia','Slovenia','Spain','Sweden',
+  'Iceland','Norway','Switzerland','Liechtenstein'
 ]);
+const HORS_SCHENGEN = new Set(['Ireland','Cyprus','United Kingdom']);
+function flightType(country) {
+  if (SCHENGEN.has(country)) return 'schengen';
+  if (HORS_SCHENGEN.has(country)) return 'horsschengen';
+  return 'tiers';
+}
 
 let radiusKm = 80;
 let refreshSec = 60;
@@ -402,7 +411,8 @@ function processData(data) {
     const vrMs = s[11];
     const callsign = cs || icao.toUpperCase();
     const country = s[2] || '?';
-    const nonEU = !EU.has(country);
+    const ftype = flightType(country);
+    const nonEU = ftype !== 'schengen';
 
     // Runway detection
     let runway = null;
@@ -412,7 +422,7 @@ function processData(data) {
     }
 
     const flight = {
-      icao, callsign, country, nonEU,
+      icao, callsign, country, nonEU, ftype,
       lat, lon, altFt, speedKt, vrMs,
       dist: Math.round(dist),
       track, runway
@@ -456,9 +466,11 @@ function vrHtml(vrMs) {
 }
 
 function cardHtml(f, blinkClass, clickable) {
-  const badge = f.nonEU
-    ? '<span class="badge tiers">Hors UE</span>'
-    : '<span class="badge eu">UE</span>';
+  const badge = f.ftype === 'schengen'
+    ? '<span class="badge schengen">Schengen</span>'
+    : f.ftype === 'horsschengen'
+      ? '<span class="badge horsschengen">Hors Schengen</span>'
+      : '<span class="badge tiers">Pays tiers</span>';
   const rwBadge = f.runway
     ? `<span class="badge rwy">RWY ${f.runway}</span>`
     : '';
@@ -492,7 +504,12 @@ function render() {
 
   const la = document.getElementById('list-approche');
   la.innerHTML = apList.length
-    ? apList.map(f => cardHtml(f, f.nonEU ? 'blink-tiers' : 'blink-eu', true)).join('')
+    ? apList.map(f => {
+        const blink = f.ftype === 'schengen' ? 'blink-schengen'
+                    : f.ftype === 'horsschengen' ? 'blink-hs'
+                    : 'blink-tiers';
+        return cardHtml(f, blink, true);
+      }).join('')
     : '<div class="empty">Aucun vol en approche</div>';
 
   const ln = document.getElementById('list-annonces');
