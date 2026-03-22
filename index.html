@@ -201,6 +201,15 @@ button#refresh-btn:hover { background: #1f6feb44; }
 .badge.tiers { background: #da3633; color: #ffa198; border: 1px solid #da363366; }
 .badge.rwy { background: #2ea04322; color: #56d364; border: 1px solid #2ea04366; font-size: 11px; }
 
+.card-ts {
+  font-size: 10px;
+  color: #484f58;
+  margin-top: 7px;
+  padding-top: 6px;
+  border-top: 1px solid #21262d;
+  font-variant-numeric: tabular-nums;
+}
+
 .card-country {
   font-size: 11px;
   color: #8b949e;
@@ -300,8 +309,8 @@ button#refresh-btn:hover { background: #1f6feb44; }
 </div>
 
 <script>
-const BVA_LAT = 49.4544;
-const BVA_LON = 2.1128;
+const BVA_LAT = 49.506;
+const BVA_LON = 2.004;
 
 const EU = new Set([
   'Austria','Belgium','Bulgaria','Croatia','Cyprus','Czech Republic','Czechia',
@@ -377,7 +386,7 @@ function processData(data) {
 
     // Callsign filter
     const cs = (s[1] || '').trim();
-    const PREFIXES = ['WZZ','WMT','VOE','HYS','SEU','DNA','FR'];
+    const PREFIXES = ['WZZ','WMT','VOE','HYS','SEU','DNA','RUK','FR'];
     if (!PREFIXES.some(p => cs.toUpperCase().startsWith(p))) continue;
 
     // Altitude filter: below FL100 (3048m)
@@ -429,10 +438,11 @@ function processData(data) {
 function acknowledge(icao) {
   const f = approaching[icao];
   if (!f) return;
+  const ackedAt = Date.now();
   delete approaching[icao];
   announcedSet.add(icao);
-  announced.unshift({ ...f, ackedAt: Date.now() });
-  if (f.nonEU) pafList.unshift({ ...f, ackedAt: Date.now() });
+  announced.unshift({ ...f, ackedAt });
+  if (f.nonEU) pafList.unshift({ ...f, ackedAt });
   render();
 }
 
@@ -452,6 +462,9 @@ function cardHtml(f, blinkClass, clickable) {
   const rwBadge = f.runway
     ? `<span class="badge rwy">RWY ${f.runway}</span>`
     : '';
+  const tsHtml = f.ackedAt
+    ? `<div class="card-ts">Annoncé à ${new Date(f.ackedAt).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit',second:'2-digit'})}</div>`
+    : '';
   const stats = [
     f.altFt !== null ? `<div class="stat"><span class="stat-val">${f.altFt.toLocaleString('fr-FR')}</span><span class="stat-lbl">ft</span></div>` : '',
     f.speedKt !== null ? `<div class="stat"><span class="stat-val">${f.speedKt}</span><span class="stat-lbl">kt</span></div>` : '',
@@ -466,6 +479,7 @@ function cardHtml(f, blinkClass, clickable) {
     </div>
     <div class="card-country">${f.country}</div>
     <div class="card-stats">${stats}</div>
+    ${tsHtml}
   </div>`;
 }
 
@@ -533,7 +547,7 @@ async function doRefresh() {
     document.getElementById('last-update').textContent =
       'MAJ ' + now.toLocaleTimeString('fr-FR');
     setDot('ok');
-    setStatusText(`BVA · rayon ${radiusKm} km · ${(data.states||[]).length} états reçus`);
+    setStatusText(`Milly-sur-Thérain · rayon ${radiusKm} km · ${(data.states||[]).length} états reçus`);
     // Hide notice bar if visible
     document.getElementById('notice-bar-wrap').innerHTML = '';
   } catch (err) {
