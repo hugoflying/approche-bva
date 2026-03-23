@@ -403,7 +403,7 @@ function processData(data) {
 
     // Callsign filter
     const cs = (s[1] || '').trim();
-    const PREFIXES = ['WZZ','WMT','VOE','HYS','SEU','DNA','RUK','FR'];
+    const PREFIXES = ['WZZ','WMT','VOE','HYS','SEU','DNA','RUK','RYR'];
     if (!PREFIXES.some(p => cs.toUpperCase().startsWith(p))) continue;
 
     // Altitude filter: below FL100 (3048m)
@@ -443,10 +443,7 @@ function processData(data) {
     }
   }
 
-  // Drop flights that left the zone
-  for (const icao of Object.keys(approaching)) {
-    if (!seen.has(icao)) delete approaching[icao];
-  }
+  // Ne plus supprimer les vols qui quittent la zone — ils restent jusqu'au clic
 
   render();
 }
@@ -522,12 +519,12 @@ function render() {
 
   const ln = document.getElementById('list-annonces');
   ln.innerHTML = announced.length
-    ? announced.map(f => cardHtml(f, '', false)).join('')
+    ? announced.map(f => cardHtml(f, '', true)).join('')
     : '<div class="empty">Aucun vol annoncé</div>';
 
   const lp = document.getElementById('list-paf');
   lp.innerHTML = pafList.length
-    ? pafList.map(f => cardHtml(f, '', false)).join('')
+    ? pafList.map(f => cardHtml(f, '', true)).join('')
     : '<div class="empty">Aucun vol PAF</div>';
 }
 
@@ -536,6 +533,29 @@ function render() {
 document.getElementById('list-approche').addEventListener('click', e => {
   const card = e.target.closest('.card[data-icao]');
   if (card) acknowledge(card.dataset.icao);
+});
+
+function removeFromList(arr, icao) {
+  const i = arr.findIndex(f => f.icao === icao);
+  if (i !== -1) arr.splice(i, 1);
+}
+
+document.getElementById('list-annonces').addEventListener('dblclick', e => {
+  const card = e.target.closest('.card[data-icao]');
+  if (!card) return;
+  const icao = card.dataset.icao;
+  removeFromList(announced, icao);
+  removeFromList(pafList, icao);
+  render();
+});
+
+document.getElementById('list-paf').addEventListener('dblclick', e => {
+  const card = e.target.closest('.card[data-icao]');
+  if (!card) return;
+  const icao = card.dataset.icao;
+  removeFromList(announced, icao);
+  removeFromList(pafList, icao);
+  render();
 });
 
 // ── Controls ──────────────────────────────────────────────────────────────────
